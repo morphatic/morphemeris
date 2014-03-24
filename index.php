@@ -52,6 +52,7 @@
                     <button id="calculate" class="btn btn-primary">Calculate Your Aspects</button>
                 </div>
             </div>
+			<table id="aspects_table"></table>
         </div>
         
         <!-- Footer -->

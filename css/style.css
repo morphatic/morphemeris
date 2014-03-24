@@ -37,3 +37,19 @@ body > .container {
 	padding-right: 15px;
 	padding-left: 15px;
 }
+
+#aspects_table td {
+	line-height: 1;
+	width: 48px;
+	border: 1px solid #999;
+	text-align: center;
+}
+.trine {
+	color: green;
+}
+.square {
+	color: red;
+}
+.quintile, .biquintile {
+	color: blue;
+}

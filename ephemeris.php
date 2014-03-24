@@ -12,4 +12,5 @@
 	
 	// convert to Julian day number
 	$jd = $date->getTimestamp() / 86400 + 2440587.5;
-	echo strtolower( `./morph -d$jd` );
+	$out = strtolower( preg_replace( '/^.*?{/', '{', `./morph -d$jd` ) );
+	echo $out;

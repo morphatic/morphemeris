@@ -1,7 +1,10 @@
 jQuery( function( $ ) {
 	
 	// set up font map
-	var cmap = {
+	var plist  = [ 'sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto', 'true node', 'ceres', 'pallas', 'juno', 'vesta' ],
+		//rplist = [ 'sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto', 'true node', 'mean node', 'ceres', 'pallas', 'juno', 'vesta' ],
+		rplist = [ 'chiron', 'vesta', 'juno', 'pallas', 'ceres', 'true node', 'pluto', 'neptune', 'uranus', 'saturn', 'jupiter', 'mars', 'venus', 'mercury', 'moon' ],
+		cmap = {
 			sun: 'a',
 			moon: 's',
 			mercury: 'd',
@@ -29,7 +32,7 @@ jQuery( function( $ ) {
 			biquintile: 'C',
 			inconjunct: 'n',
 			opposition: 'm'
-		}, getAspect, omit = [];
+		}, getAspect, omit = [], out='<tr><td>&nbsp;</td>', stop;
 	
 	getAspect = function( angle ) {
 		if      ( angle <=   6 )                 { return 'conjunct';   }
@@ -50,14 +53,20 @@ jQuery( function( $ ) {
 	$( '#calculate' ).click( function() {
 		$.get( 'ephemeris.php', { date: $( '#birthday' ).val(), timezone: $( '#timezone' ).val() } )
 		 .done( function( planets ) {
-			$.each( planets, function( p1, d1 ) {
-				omit.push( p1 );
-				$.each( _.omit( planets, omit ), function( p2, d2 ) {
-					var aspect;
-					aspect = getAspect( Math.abs( d1.lon - d2.lon ) );
-					if ( '' != aspect ) console.log( p1 + ' ' + aspect + ' ' + p2 );
-				});
+			$.each( plist, function( i, p ) {
+				out += '<td class="kairon">' + cmap[ p ] + '</td>';
 			});
+			$.each( rplist, function( i, p1 ) {
+				out += '</tr><tr><td class="kairon">' + cmap[ p1 ] + '</td>';
+				stop = false;
+				$.each( plist, function( j, p2 ) {
+					if ( stop || p1 == p2 ) { stop = true; return;}
+					var aspect = getAspect( Math.abs( planets[ p1 ].lon - planets[ p2 ].lon ) );
+					out += '' != aspect ? '<td><span class="kairon ' + aspect + '">' + cmap[ aspect ] + '</span></td>' : '<td>&nbsp;</td>';
+				});
+				out += '</tr>';
+			});
+			$( '#aspects_table' ).append( out );
 		 });
 	});
 });
