@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Force Test</title>
+        <style>
+            #chart {
+                width: 800px;
+                margin: 40px auto;
+                border: 1px solid #ccc;
+            }
+            rect {
+                fill: none;
+            }
+            text {
+                fill: #000;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="chart"></div>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.5/d3.min.js"></script>
+        <script>
+            var w   = 800,
+                h   = 600,
+                svg = d3.select( '#chart' ).append( 'svg:svg' ).attr( 'width', w ).attr( 'height', h ),
+                r   = svg.append( 'svg:rect' ).attr( 'width', w ).attr( 'height', h ),
+                n   = [
+                    { text: '0', index: 0, x:  95, y: 105, radius: 10, fixed:  true, fill: 'steelblue' },
+                    { text: '1', index: 1, x: 100, y: 100, radius: 10, fixed:  true, fill: 'steelblue' },
+                    { text: 'B', index: 2, x: 100, y: 100, radius: 15, fixed: false, fill: 'steelblue' },
+                    { text: 'C', index: 3, x: 100, y: 100, radius: 15, fixed: false, fill: 'steelblue' }
+                ],
+                lnk = [
+                    { source: 0, target: 2 },
+                    { source: 1, target: 3 }
+                ],
+                f   = d3.layout.force()
+                        //.gravity( 0.01 )
+                        .charge( function( d, i ) { return i ? 0 : -200; } )
+                        .nodes( n )
+                        .links( lnk )
+                        .size( [ w, h ] ),
+                collide, link;
+
+            f.start();
+
+            /* *
+            svg.selectAll( 'circle' )
+                .data( n )
+                .enter().append( 'svg:circle' )
+                .attr( 'r', function( d ) { return d.radius - 2; } )
+                .style( 'fill', function( d ) { return d.fill; } );
+            /**/
+
+            /* */
+            svg.selectAll( 'text' )
+                .data( n )
+                .enter().append( 'text' )
+                .text( function( d ) { return d.text; } )
+                .attr( 'x', function( d ) { return d.x; } )
+                .attr( 'y', function( d ) { return d.y; } )
+                .style( 'font-size', '15px' )
+                .style( 'line-height', '15px' )
+                .style( 'text-anchor', 'middle' )
+                .style( 'fill', function( d ) { return d.fill; } );
+            /**/
+
+            link = svg.selectAll( '.link' )
+                .data( lnk )
+                .enter().append( 'line' )
+                .attr( 'class', 'link' )
+                .style( 'stroke', '#999' )
+                .style( 'stroke-width', '1' );
+
+            f.on( 'tick', function( e ) {
+                var q = d3.geom.quadtree( n ),
+                    i = 0,
+                    l = n.length;
+
+                while ( ++i < l ) { q.visit( collide( n[ i ] ) ); }
+                /* *
+                svg.selectAll( 'circle' )
+                    .attr( 'cx', function( d ) { return d.x; } )
+                    .attr( 'cy', function( d ) { return d.y; } );
+                /**/
+
+                /* */
+                svg.selectAll( 'text' )
+                    .attr( 'x', function( d ) { return d.x; } )
+                    .attr( 'y', function( d ) { return d.y + 5; } );
+                /**/
+
+                link.attr( 'x1', function( d ) { return d.source.x; } )
+                    .attr( 'y1', function( d ) { return d.source.y; } )
+                    .attr( 'x2', function( d ) { return d.target.x; } )
+                    .attr( 'y2', function( d ) { return d.target.y; } );
+            });
+
+            collide = function( node ) {
+                var rad = node.radius + 16,
+                    nx1 = node.x - rad,
+                    nx2 = node.x + rad,
+                    ny1 = node.y - rad,
+                    ny2 = node.y + rad;
+                return function( quad, x1, y1, x2, y2 ) {
+                    if ( quad.point && ( quad.point !== node ) ) {
+                        var x = node.x - quad.point.x,
+                            y = node.y - quad.point.y,
+                            h = Math.sqrt( x * x + y * y ),
+                            d = node.radius + quad.point.radius;
+                        if ( h < d ) {
+                            h = ( h - d ) / d * .5;
+                            node.x -= x *= h;
+                            node.y -= y *= h;
+                            quad.point.x += x;
+                            quad.point.y += y;
+                        }
+                    }
+                    return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+                };
+            };
+        </script>
+    </body>
+</html>

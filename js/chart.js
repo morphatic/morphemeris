@@ -7,13 +7,13 @@ var Planet, Aspect,
 			 "leo": 't', "virgo": 'z', "libra": 'u', "scorpio": 'i', "sagittarius": 'o', "capricorn": 'p',
 			 "aquarius": 'ü', "pisces": '+', "conjunct": '<', "semisextile": 'y', "semisquare": '=', "sextile": 'x',
 			 "quintile": 'Y', "square": 'c', "trine": 'Q', "sesquiquadrate": 'b', "biquintile": 'C', "inconjunct": 'n',
-			 "opposition": 'm',"eris": 'È', "chaos": 'Ê' }; // mapping of objects to the characters that represent them
+			 "opposition": 'm',"eris": 'È', "chaos": 'Ê', "earth": 'g' }; // mapping of objects to the characters that represent them
 
 // define the planet object
-Planet = function( index, name, lon, retro, x, y ) {
-	this.index   = index; // for d3.force
+Planet = function( name, lon, retro, x, y ) {
 	this.fixed   = false; // for d3.force
 	this.weight  = 1;     // for d3.force
+	this.radius  = 15;    // for d3.force
 	this.name    = name;
 	this.lon     = lon;   // longitude; should we correct this here or somewhere else?
 	this.retro   = retro; // is it retrograde?
@@ -214,55 +214,82 @@ $(function(){
 		drawArc( svg, h1, h2, -90, hd, function( d ) { return d; }, function( d, i ) { return 12 - i; }, 'harc' );
 	};
 	drawPlanets = function() {
-		var r1 = innerRadius, r2 = r1 - 30, x, y, t, nodes = planets, g,
-			force = d3.layout.force().nodes( nodes ).charge( -1000 ).size( [ width, height ] ).start();
+		var nodes = [ { name: 'earth', x: 0, y: 2, radius: 20, fixed: true, weight: 0 } ], links = [], g, collide, f, link;
+
+		// populate the nodes and links
+		$.each( planets, function( i, p ) {
+			var fixed = { x: p.x, y: p.y, radius: 0, fixed: true, weight: 1 };
+			nodes.push( fixed );
+			nodes.push( p );
+			links.push( { source: fixed, target: p } );
+		});
+
+		// set up the force layout
+		f = d3.layout.force()
+			  .gravity( 0.05 )
+			  .charge( function( d, i ) { return i ? 0 : -300; } )
+			  .nodes( nodes )
+			  .links( links )
+			  .size( [ 0, 0 ] ).start();
 
 		g = svg.append( 'g' ).attr( 'class', 'planets' );
 		g.selectAll( 'text' )
-		 .data( nodes.slice( 1 ) )
+		 .data( nodes )
 		 .enter().append( 'text' )
-		 .attr( 'x', function( d ) { return r2 * Math.cos( d.lon * Math.PI / 180 ); } )
-		 .attr( 'y', function( d ) { return r2 * Math.sin( d.lon * Math.PI / 180 ); } )
-		 .attr( 'dx', '0' )
-		 .attr( 'dy', '10px' )
-		 .text( function( d ) { return cmap[ d.name ]; } )
+		 .attr( 'x', function( p ) { return p.x; } )
+		 .attr( 'y', function( p ) { return p.y; } )
+		 .text( function( p, i ) { return 1 == i % 2 ? '' : cmap[ p.name ]; } )
 		 .attr( 'class', 'planet' )
 		 .style( 'font-size', '1.5em' )
 		 .style( 'text-anchor', 'middle' );
-		console.log( nodes );
-		force.resume();
-		/*
-		$( planets ).each( function( i, p ) {
-			var g = svg.append( 'g' );
-			g.attr( 'class', p.name );
-			drawSpoke( p.lon, r1, r2, g, '#999', 1,  0 );
-			rads = p.lon * Math.PI / 180;
-			x = r2 * Math.cos( rads );
-			y = r2 * Math.sin( rads );
-			t = g.append( 'text' )
-				.attr( 'x', x )
-				.attr( 'y', y )
-				.attr( 'dx', '0' )
-				.attr( 'dy', '10px' )
-				.text( cmap[ p.name ] )
-				.attr( 'class', 'planet' )
-				.style( 'font-size', '1.5em')
-				.style( 'text-anchor', 'middle' );
-			if ( 1 == p.r ) {
-				t.append( 'tspan' ).attr( 'dy', '-1em' ).attr( 'font-size', '0.5em' ).text( ' ®' );
-			}
-			fi = i + planets.length;
-			fx = r1 * Math.cos( rads );
-			fy = r2 * Math.cos( rads );
-			fixed  = { index: fi, x: fx, y: fy, fixed: true,  weight: 1 };
-			moving = { index:  i, x:  x, y:  y, fixed: false, weight: 1, tnode: t };
-			//console.log( t[ 0 ] );
-			nodes[  i ] = moving;
-			nodes[ fi ] = fixed;
-			links.push( { source: nodes[ fi ], target: nodes[ i ] } );
-		})
-		.promise().done( function() { console.log( links ); force.resume(); } );
-		*/
+
+		link = g.selectAll( '.link' )
+			.data( links )
+			.enter().append( 'line' )
+			.attr( 'class', 'link' )
+			.style( 'stroke', '#999' )
+			.style( 'stroke-width', '2' );
+
+		f.on( 'tick', function( e ) {
+			var q = d3.geom.quadtree( nodes ),
+				i = 0,
+				l = nodes.length;
+
+			while ( ++i < l ) { q.visit( collide( nodes[ i ] ) ); }
+
+			svg.selectAll( 'text' )
+				.attr( 'x', function( d ) { return d.x; } )
+				.attr( 'y', function( d ) { return d.y + 5; } );
+
+			link.attr( 'x1', function( d ) { return d.source.x; } )
+				.attr( 'y1', function( d ) { return d.source.y; } )
+				.attr( 'x2', function( d ) { return d.target.x; } )
+				.attr( 'y2', function( d ) { return d.target.y; } );
+		});
+
+		collide = function( node ) {
+			var rad = node.radius + 16,
+				nx1 = node.x - rad,
+				nx2 = node.x + rad,
+				ny1 = node.y - rad,
+				ny2 = node.y + rad;
+			return function( quad, x1, y1, x2, y2 ) {
+				if ( quad.point && ( quad.point !== node ) ) {
+					var x = node.x - quad.point.x,
+						y = node.y - quad.point.y,
+						h = Math.sqrt( x * x + y * y ),
+						d = node.radius + quad.point.radius;
+					if ( h < d ) {
+						h = ( h - d ) / d * .5;
+						node.x -= x *= h;
+						node.y -= y *= h;
+						quad.point.x += x;
+						quad.point.y += y;
+					}
+				}
+				return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+			};
+		};
 	};
 	drawAspects = function() {
 		var g = svg.append( 'g' ).attr( 'class', 'aspects' );
@@ -298,7 +325,7 @@ $(function(){
 					x   = innerRadius * Math.cos( rad ), // x coord on the chart
 					y   = innerRadius * Math.sin( rad ); // y coord on the chart
 				// add it to the global list of planets
-				planets.push( new Planet( i, pname, lon, +p.r, x, y ) );
+				planets.push( new Planet( pname, lon, +p.r, x, y ) );
 				i++;
 			});
 
@@ -344,9 +371,11 @@ $(function(){
 			});
 			$( '#all_aspects' ).button().on( 'click', function() { $( '#aspects_tab input[type="checkbox"]:not(:checked)' ).prop( 'checked', true  ).trigger( 'change' ); } );
 			$( '#no_aspects'  ).button().on( 'click', function() { $( '#aspects_tab input[type="checkbox"]:checked'       ).prop( 'checked', false ).trigger( 'change' ); } );
+			$( '#no_aspects' ).button().trigger( 'click' );
 		});
 	};
 
 	$( '#panel' ).tabs();
 	drawChart( nicole );
+
 });
