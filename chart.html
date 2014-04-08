@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Chart</title>
+		<link rel="stylesheet" href="//code.jquery.com/ui/1.10.4/themes/dark-hive/jquery-ui.css">
+		<style type="text/css">
+			@font-face {
+				font-family: "Kairon Semiserif";
+				src: url( "css/KaironSemiserifEnhanced.ttf" ) format( 'truetype' );
+			}
+			.zarc, .planet {
+				font-family: "Kairon Semiserif";
+			}
+			body {
+				background: transparent url( ../images/space.jpg ) center center no-repeat fixed;
+			}
+			td {
+				vertical-align: top;
+			}
+			#chart {
+				width: 700px;
+				height: 700px;
+				padding: 25px;
+				margin-right: 25px;
+				background: rgba( 255, 255, 255, 0.90 );
+				background: rgba( 0, 0, 0, 0.70 );
+				border-radius: 6px;
+				fill: #ccc;
+				border: 1px solid #555;
+			}
+			#panel {
+				width: 450px;
+				background: rgba( 0, 0, 0, 0.70 );
+				height: 743px;
+			}
+			#planets_tab ul, #aspects_tab ul {
+				list-style: none;
+			}
+			#planets_tab ul li, #aspects_tab ul li {
+				text-indent: -1em;
+				margin-left: -1em;
+				padding-left: 0;
+			}
+			.harc:hover path {
+				fill: rgba( 255, 0, 0, 0.6 );
+			}
+			.semisextile    { stroke: #1F5EA8; }
+			.semisquare     { stroke: #EB403B; }
+			.sextile        { stroke: #274389; }
+			.quintile       { stroke: #227FB0; }
+			.square         { stroke: #B32E37; }
+			.trine          { stroke: #39C0B3; }
+			.sesquiquadrate { stroke: #6C2A6A; }
+			.biquintile     { stroke: #2AB0C5; }
+			.inconjunct     { stroke: #E98931; }
+			.opposition     { stroke: #FBB735; }
+			.hidden { display: none !important; }
+			#aspects_toolbar, #planets_toolbar {
+				display: inline-block;
+				padding: 4px;
+			}
+		</style>
+	</head>
+	<body>
+		<table id="container">
+			<tr>
+				<td>
+					<div id="chart"></div>
+				</td>
+				<td>
+					<div id="panel">
+						<ul>
+							<li><a href="#planets_tab">Planets</a></li>
+							<li><a href="#aspects_tab">Aspects</a></li>
+						</ul>
+						<div id="planets_tab">
+							<p>
+								Select which planets you'd like displayed on the chart.
+							</p>
+							<ul></ul>
+						</div>
+						<div id="aspects_tab">
+							<p>
+								Select which aspects you'd like displayed on the chart.
+							</p>
+							<div id="aspect_toolbar" class="ui-widget-header ui-corner-all">
+								<button id="all_aspects">All</button>
+								<button id="no_aspects">None</button>
+							</div>
+							<ul>
+								<li><label><input type="checkbox" checked name="semisextile">semisextile</label></li>
+								<li><label><input type="checkbox" checked name="semisquare">semisquare</label></li>
+								<li><label><input type="checkbox" checked name="sextile">sextile</label></li>
+								<li><label><input type="checkbox" checked name="quintile">quintile</label></li>
+								<li><label><input type="checkbox" checked name="square">square</label></li>
+								<li><label><input type="checkbox" checked name="trine">trine</label></li>
+								<li><label><input type="checkbox" checked name="sesquiquadrate">sesquiquadrate</label></li>
+								<li><label><input type="checkbox" checked name="biquintile">biquintile</label></li>
+								<li><label><input type="checkbox" checked name="inconjunct">inconjunct (quincunx)</label></li>
+								<li><label><input type="checkbox" checked name="opposition">opposition</label></li>
+							</ul>
+						</div>
+					</div>
+				</td>
+			</tr>
+		</table>
+		<script src="//code.jquery.com/jquery-2.1.0.min.js"></script>
+		<script src="//code.jquery.com/ui/1.10.4/jquery-ui.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.4/d3.min.js"></script>
+		<script src="js/chart.js"></script>
+	</body>
+</html>
