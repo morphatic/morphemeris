@@ -7,7 +7,7 @@
 		<style type="text/css">
 			@font-face {
 				font-family: "Kairon Semiserif";
-				src: url( "css/KaironSemiserifEnhanced.ttf" ) format( 'truetype' );
+				src: url( "css/KaironSemiserif.ttf" ) format( 'truetype' );
 			}
 			.zarc, .planet {
 				font-family: "Kairon Semiserif";
@@ -91,20 +91,9 @@
 							<div id="aspect_toolbar" class="ui-widget-header ui-corner-all">
 								<button id="all_aspects">All</button>
 								<button id="no_aspects">None</button>
+								<button id="common_aspects">Common</button>
 							</div>
-							<ul>
-								<li><label><input type="checkbox" checked name="semisextile">semisextile</label></li>
-								<li><label><input type="checkbox" checked name="semisquare">semisquare</label></li>
-								<li><label><input type="checkbox" checked name="sextile">sextile</label></li>
-								<li><label><input type="checkbox" checked name="quintile">quintile</label></li>
-								<li><label><input type="checkbox" checked name="square">square</label></li>
-								<li><label><input type="checkbox" checked name="tredecile">tredecile</label></li>
-								<li><label><input type="checkbox" checked name="trine">trine</label></li>
-								<li><label><input type="checkbox" checked name="sesquiquadrate">sesquiquadrate</label></li>
-								<li><label><input type="checkbox" checked name="biquintile">biquintile</label></li>
-								<li><label><input type="checkbox" checked name="inconjunct">inconjunct (quincunx)</label></li>
-								<li><label><input type="checkbox" checked name="opposition">opposition</label></li>
-							</ul>
+							<ul></ul>
 						</div>
 					</div>
 				</td>
@@ -114,5 +103,19 @@
 		<script src="//code.jquery.com/ui/1.10.4/jquery-ui.min.js"></script>
 		<script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.4/d3.min.js"></script>
 		<script src="js/chart.js"></script>
+		<script>
+			$(function(){
+				var //morgan = { lat: 37.413611, lon:  -79.1425,  date: '2/18/1974 12:30 AM', tz: 'UTC' },
+					nicole = { lat: 35.216667, lon:  -80.85,    date: '4/25/1976  1:02 PM', tz: 'UTC' },
+					//nozomi = { lat: 43.483333, lon: 142.08333,  date: '7/30/1973  2:57 PM', tz: 'UTC' },
+					//melvin = { lat: 38.857985, lon: -77.227071, date: '1/06/1994  6:00 AM', tz: 'America/New_York' },
+					chart  = new Chart( 'chart', 700, 700 );
+
+				//console.log( chart );
+				$.get( 'ephemeris.php', nicole ).done( function( cdata ) { chart.draw( cdata ); } );
+				$( '#panel' ).tabs();
+
+			});
+		</script>
 	</body>
 </html>

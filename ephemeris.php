@@ -2,11 +2,14 @@
 	header( 'content-type: application/json' );
 	ini_set( 'display_errors', 0 );
 
-	// get birthday and timezone; default 4/25/1976, 12:00 Eastern time
-	$bd  = $_GET[ 'date' ] ?: '2/17/1974 7:30 PM';
+	// set the default timezone to UTC
+	date_default_timezone_set( 'UTC' );
+
+	// get birthday and timezone; defaults to now
+	$bd  = $_GET[ 'date' ] ?: date( 'n/j/Y g:i A' );
 	$lat = $_GET[ 'lat'  ] ?: 37.438205;
 	$lon = $_GET[ 'lon'  ] ?: -79.187155;
-	$z   = $_GET[ 'tz'   ] ?: 'America/New_York';
+	$z   = $_GET[ 'tz'   ] ?: 'UTC';
 
 	// create the date object and convert to UTC
 	$date = new DateTime( $bd, new DateTimeZone( $z ) );
