@@ -1,16 +1,105 @@
-// globals
-var Planet, Aspect,
-	cmap = { "sun": 'a', "moon": 's', "mercury": 'd', "venus": 'f', "mars": 'h', "jupiter": 'j',
-			 "saturn": 'k', "uranus": 'ö', "neptune": 'ä', "pluto": '#', "south node": '?', "north node": 'ß',
-			 "ceres": 'A', "pallas": 'S', "juno": 'D', "vesta": 'F', "lilith": 'ç', "cupido": 'L', "chiron": 'l',
-			 "nessus": 'ò', "pholus": 'ñ', "chariklo": 'î', "aries": 'q', "taurus": 'w', "gemini": 'e', "cancer": 'r',
-			 "leo": 't', "virgo": 'z', "libra": 'u', "scorpio": 'i', "sagittarius": 'o', "capricorn": 'p',
-			 "aquarius": 'ü', "pisces": '+', "conjunct": '<', "semisextile": 'y', "semisquare": '=', "sextile": 'x',
-			 "quintile": 'Y', "square": 'c', "trine": 'Q', "sesquiquadrate": 'b', "biquintile": 'C', "inconjunct": 'n',
-			 "opposition": 'm',"eris": 'È', "chaos": 'Ê', "earth": 'g' }; // mapping of objects to the characters that represent them
+(function() {
+	'use strict';
 
-// define the planet object
+var Planet, // class for representing planets
+	Aspect, // class for representing planets
+	Chart,  // class for drawing charts
+	// mapping of planets, signs, aspects, etc. to the Kairon Semiserif font
+	cmap = {
+		"sun":            'a',
+		"moon":           's',
+		"mercury":        'd',
+		"venus":          'f',
+		"earth":          'g',
+		"mars":           'h',
+		"jupiter":        'j',
+		"saturn":         'k',
+		"uranus":         'ö',
+		"neptune":        'ä',
+		"pluto":          '#',
+		"south node":     '?',
+		"north node":     'ß',
+		"ceres":          'A',
+		"pallas":         'S',
+		"juno":           'D',
+		"vesta":          'F',
+		"lilith":         'ç',
+		"cupido":         'L',
+		"chiron":         'l',
+		"nessus":         'ò',
+		"pholus":         'ñ',
+		"chariklo":       'î',
+		"eris":           'È',
+		"chaos":          'Ê',
+		"fortuna":        '%',
+		"retrograde":     '®',
+		"aries":          'q',
+		"taurus":         'w',
+		"gemini":         'e',
+		"cancer":         'r',
+		"leo":            't',
+		"virgo":          'z',
+		"libra":          'u',
+		"scorpio":        'i',
+		"sagittarius":    'o',
+		"capricorn":      'p',
+		"aquarius":       'ü',
+		"pisces":         '+',
+		"conjunct":       '<',
+		"semisextile":    'y',
+		"decile":         '>',
+		"novile":         'M',
+		"semisquare":     '=',
+		"septile":        'V',
+		"sextile":        'x',
+		"quintile":       'Y',
+		"bilin":          '-',
+		"binovile":       ';',
+		"square":         'c',
+		"biseptile":      'N',
+		"tredecile":      'X',
+		"trine":          'Q',
+		"sesquiquadrate": 'b',
+		"biquintile":     'C',
+		"inconjunct":     'n',
+		"treseptile":     'B',
+		"tetranovile":    ':',
+		"tao":            '—',
+		"opposition":     'm',
+		"parallel":       'O',
+		"contraparallel": 'P',
+		"degrees":        '°',
+		"minutes":        '`',
+		"seconds":        '"'
+	},
+	// object to hold aspects, angles, and orbs
+	amap = {
+		conjunct:       { angle:   0,     orb: 6   },
+		semisextile:    { angle:  30,     orb: 3   },
+		decile:         { angle:  36,     orb: 1.5 },
+		novile:         { angle:  40,     orb: 1.9 },
+		semisquare:     { angle:  45,     orb: 3   },
+		septile:        { angle:  51.417, orb: 2   },
+		sextile:        { angle:  60,     orb: 6   },
+		quintile:       { angle:  72,     orb: 2   },
+		bilin:          { angle:  75,     orb: 0.9 },
+		binovile:       { angle:  80,     orb: 2   },
+		square:         { angle:  90,     orb: 6   },
+		biseptile:      { angle: 102.851, orb: 2   },
+		tredecile:      { angle: 108,     orb: 2   },
+		trine:          { angle: 120,     orb: 6   },
+		sesquiquadrate: { angle: 135,     orb: 3   },
+		biquintile:     { angle: 144,     orb: 2   },
+		inconjunct:     { angle: 150,     orb: 3   },
+		treseptile:     { angle: 154.284, orb: 1.1 },
+		tetranovile:    { angle: 160,     orb: 3   },
+		tao:            { angle: 165,     orb: 1.5 },
+		opposition:     { angle: 180,     orb: 6   }
+	};
+
+// define the planet object and functions
 Planet = function( name, lon, retro, x, y ) {
+	/* global $ */
 	this.fixed   = false; // for d3.force
 	this.weight  = 1;     // for d3.force
 	this.radius  = 15;    // for d3.force
@@ -19,9 +108,10 @@ Planet = function( name, lon, retro, x, y ) {
 	this.retro   = retro; // is it retrograde?
 	this.x       = x;     // the x coord on the chart
 	this.y       = y;     // the y coord on the chart
-	this.aspects = { conjunct: [], semisextile: [], semisquare: [], sextile: [],
-					 quintile: [], square: [], trine: [], sesquiquadrate: [],
-					 biquintile: [], inconjunct: [], opposition: [] };
+	this.power   = 0;	 // will hold the power, once calculated
+	this.aspects = {};
+	// initialize aspect arrays
+	$.each( amap, function( name ) { this.aspects[ name ] = []; } );
 };
 
 Planet.prototype.addAspect = function( aspect ) {
@@ -29,7 +119,7 @@ Planet.prototype.addAspect = function( aspect ) {
 };
 
 Planet.prototype.isRetrograde = function() {
-	return 1 == this.retro;
+	return 1 === this.retro;
 };
 
 // define the aspect class; constructor takes two planet objects
@@ -44,32 +134,24 @@ Aspect = function( p1, p2 ) {
 		s1  = +p1.spd,
 		s2  = +p2.spd;
 
-	// correct for cases when the angle > 186
-	if ( ang > 186 ) ang = l1 > l2 ? 360 - l1 + l2 : 360 - l2 + l1;
+	// correct for cases when the angle > 180 + the orb of opposition
+	if ( ang > 180 + amap.opposition.orb ) { ang = l1 > l2 ? 360 - l1 + l2 : 360 - l2 + l1; }
 
-	// identify and set relationship type
-	if      ( ang <=   6 )               { this.type = 'conjunct';       } //   0 +/- 6
-	else if ( ang >=  27 && ang <=  33 ) { this.type = 'semisextile';    } //  30 +/- 3
-	else if ( ang >=  42 && ang <=  48 ) { this.type = 'semisquare';     } //  45 +/- 3
-	else if ( ang >=  54 && ang <=  66 ) { this.type = 'sextile';        } //  60 +/- 6
-	else if ( ang >=  70 && ang <=  74 ) { this.type = 'quintile';       } //  72 +/- 2
-	else if ( ang >=  84 && ang <=  96 ) { this.type = 'square';         } //  90 +/- 6
-	else if ( ang >= 114 && ang <= 126 ) { this.type = 'trine';          } // 120 +/- 6
-	else if ( ang >= 132 && ang <= 138 ) { this.type = 'sesquiquadrate'; } // 135 +/- 3
-	else if ( ang >= 142 && ang <= 146 ) { this.type = 'biquintile';     } // 144 +/- 2
-	else if ( ang >= 147 && ang <= 153 ) { this.type = 'inconjunct';     } // 150 +/- 3
-	else if ( ang >= 174 && ang <= 186 ) { this.type = 'opposition';     } // 180 +/- 6
-	else {
-		// there was no aspect between these two planets
-		this.type = null;
-		return;
-	}
+	// initialize the aspect type, and determine if one exists
+	this.type = null;
+	$.each( amap, function( name, asp ) {
+		if ( ang >= asp.angle - asp.orb && ang <= asp.angle + asp.orb ) {
+			this.type = name; return false;
+		}
+	});
+	if ( null === this.type ) { return; }  // abort if no aspect!
 
 	this.planet1  = p1;    // planet associated with this aspect
 	this.planet2  = p2;    // planet associated with this aspect
 	this.degrees  = ang;   // degrees separating the two planets
 	this.applying = false; // is it applying or separating? default separating
 
+	// determine if it's applying or not
 	if (
 		// both direct AND planet with lower longitude has greater speed
 		( ( !r1 && !r2 ) && ( ( s1 > s2 && l1 < l2 ) || ( s2 > s1 && l2 < l1 ) ) ) ||
@@ -79,7 +161,7 @@ Aspect = function( p1, p2 ) {
 		( ( r1  && !r2 ) && ( l1 > l2 ) ) ||
 		// p1 direct, p2 retro; p2 longitude greater than p2 longitude
 		( ( !r1 &&  r2 ) && ( l2 > l1 ) )
-	) this.applying = true; // it is applying
+	) { this.applying = true; } // it is applying
 };
 
 Aspect.prototype.getCoords = function() {
@@ -91,48 +173,79 @@ Aspect.prototype.getCoords = function() {
 	};
 };
 
-$(function(){
-	var morgan = { lat: 37.413611, lon:  -79.1425,  date: '2/18/1974 12:30 AM', tz: 'UTC' },
-		nicole = { lat: 35.216667, lon:  -80.85,    date: '4/25/1976  1:02 PM', tz: 'UTC' },
-		nozomi = { lat: 43.483333, lon: 142.08333,  date: '7/30/1973  2:57 PM', tz: 'UTC' },
-		melvin = { lat: 38.857985, lon: -77.227071, date: '1/06/1994  6:00 AM', tz: 'America/New_York' },
-		width  = 700,
-		height = 700,
-		planets = [],
-		aspects = [],
-		ascendant,
-		outerRadius = Math.min( width, height ) / 2,
-		innerRadius = outerRadius - 50,
-		crt    = d3.select( '#chart' ).append( 'svg' ).attr( 'width', width ).attr( 'height', height ),
-		svg    = crt.append( 'g' ).attr( "transform", "translate(" + width / 2 + "," + height / 2 + ")" ),
+// define the Chart class
+Chart = function( el, width, height, radius ) {
+	this.width       = width;        // the width of the chart
+	this.height      = height;       // the height of the chart
+	this.outerRadius = radius;       // the outer radius for the chart
+	this.innerRadius = radius - 50;  // the inner radius for the chart
+	this.planets     = [];	       // the planets to draw on this chart
+	this.aspects     = [];	       // the aspects between the planets
+	this.ascendant   = 0;	        // the default ascendant
+	// initialize the chart object
+	this.chart = d3.select( '#' + el )
+					.append( 'svg' )
+					.attr( 'width', this.width )
+					.attr( 'height', this.height );
+	// initialize the svg object
+	this.svg = this.chart.append( 'g' )
+					.attr( "transform", "translate(" + this.width / 2 + "," + this.height / 2 + ")" );
+};
 
-		getAspect;
+Chart.prototype.draw = function( person ) {
 
+	// variable declarations
+	var drawSpoke,   // function that draws radial lines on the chart
+		drawArc,	 // function that draws zodiac and house arcs
+		drawHouses,  // function for drawing the houses
+		drawPlanets, // function for drawing and locating the planets
+		drawAspects; // function for drawing the aspects on the chart
 
-	// add the horizon
-	crt.append( 'line' ).attr( 'x1', 0 ).attr( 'x2', width ).attr( 'y1', height / 2 ).attr( 'y2', height / 2 ).attr( 'stroke', '#666' ).attr( 'stroke-width', 2 );
+	// utility for drawing lines radiating out from the center of the chart
+	// set r1 = 0 to draw from the very center
+	drawSpoke = function( angle, r1, r2, g, cls, ex ) {
+		var rd = angle * Math.PI / 180,			 // the angle in radians
+			// define four coords that specify beginning and end of line
+			x1 = r1 * Math.cos( rd ),
+			y1 = r1 * Math.sin( rd ),
+			x2 = ( r2 + ex ) * Math.cos( rd ),
+			y2 = ( r2 + ex ) * Math.sin( rd );
 
+		// set default for ex
+		ex = ex === 'undefined' ? 0 : ex; // number of pixels to go past r2
+
+		// append the line to the chart
+		g.append( 'line' ).attr( 'x1', x1 ).attr( 'x2', x2 ).attr( 'y1', y1 ).attr( 'y2', y2 ).attr( 'class', cls );
+	};
+
+	// utility for drawing the zodiac and house arcs
 	// props: http://stackoverflow.com/questions/19792552/d3-put-arc-labels-in-a-pie-chart-if-there-is-enough-space
-	drawArc     = function( svg, inRad, outRad, rot, data, dFunc, tFunc, gclass, fmt ) {
+	drawArc = function( inRad, outRad, rot, data, dFunc, tFunc, gclass, aclass ) {
 		// initializations
 		var pie = d3.layout.pie().sort( null ).value( dFunc ),
 			arc = d3.svg.arc().innerRadius( inRad ).outerRadius( outRad ),
-			fmt = 'undefined' != typeof fmt ? fmt : { stroke: '#999', stroke_width: 1, fill: 'transparent' },
 			tfx = function( d ) { return 'translate( ' + arc.centroid( d ) + ') rotate( ' + (-rot) + ', 0, 0 )'; },
-			sfc = function( d ) { return d.visible ? null : null; },
-			g   = svg.selectAll( '.' + gclass ).data( pie( data ) ).enter().append( 'g' ).attr( 'class', gclass ).attr( 'transform', 'rotate( ' + rot + ', 0, 0 )'),
-			isPtInArc, labelArc;
+			g   = this.svg.selectAll( '.' + gclass )
+					.data( pie( data ) )
+					.enter().append( 'g' )
+					.attr( 'class', gclass )
+					.attr( 'transform', 'rotate( ' + rot + ', 0, 0 )' ),
+			isPtInArc, // function to determine if a given point lies within an arc
+			labelArc;  // function to determine where to locate labels for arc segments
 
-			isPtInArc   = function( pt, ptData, d3arc ) {
-			    var r1     = arc.innerRadius()( ptData ),
-			        r2     = arc.outerRadius()( ptData ),
-			        theta1 = arc.startAngle()(  ptData ),
-			        theta2 = arc.endAngle()(    ptData ),
+			// determines if a given point lies within an arc
+			isPtInArc = function( pt, ptData ) {
+				var r1     = arc.innerRadius()( ptData ),
+					r2     = arc.outerRadius()( ptData ),
+					theta1 = arc.startAngle()(  ptData ),
+					theta2 = arc.endAngle()(    ptData ),
 					dist   = pt.x * pt.x + pt.y * pt.y,
-			        angle  = Math.atan2( pt.x, -pt.y );
-			    angle = ( angle < 0 ) ? ( angle + Math.PI * 2 ) : angle;
-			    return ( r1 * r1 <= dist ) && ( dist <= r2 * r2 ) && ( theta1 <= angle ) && ( angle <= theta2 );
+					angle  = Math.atan2( pt.x, -pt.y );
+				angle = ( angle < 0 ) ? ( angle + Math.PI * 2 ) : angle;
+				return ( r1 * r1 <= dist ) && ( dist <= r2 * r2 ) && ( theta1 <= angle ) && ( angle <= theta2 );
 			};
+
+			// determines where to locate labels for arc segments
 			labelArc    = function( d ) {
 				var bb          = this.getBBox(),
 					center      = arc.centroid(d),
@@ -144,57 +257,56 @@ $(function(){
 							isPtInArc( bottomLeft, d, arc ) && isPtInArc( bottomRight, d, arc );
 			};
 
-		g.append( 'path' ).attr( 'd', arc ).attr( 'fill', fmt.fill ).attr( 'stroke', fmt.stroke ).attr( 'stroke-width', fmt.stroke_width );
-		g.append( 'text' ).attr( 'transform', tfx ).attr( 'dy', '.35em' ).style( 'text-anchor', 'middle' ).text( tFunc ).each( labelArc ).style( 'display', sfc );
+		g.append( 'path' ).attr( 'd', arc ).attr( 'class', aclass );
+		g.append( 'text' ).attr( 'transform', tfx ).attr( 'dy', '.35em' ).style( 'text-anchor', 'middle' ).text( tFunc ).each( labelArc );
 	};
-	drawSpoke   = function( angle, r1, r2, g, scol, swid, ex ) {
-		var rd = angle * Math.PI / 180,
-			ex = 'undefined' != typeof ex ? ex : 0,
-			x1 = r1 * Math.cos( rd ),
-			y1 = r1 * Math.sin( rd ),
-			x2 = ( r2 + ex ) * Math.cos( rd ),
-			y2 = ( r2 + ex ) * Math.sin( rd );
-		g.append( 'line' ).attr( 'x1', x1 ).attr( 'x2', x2 ).attr( 'y1', y1 ).attr( 'y2', y2 ).attr( 'stroke', scol ).attr( 'stroke-width', swid );
-	};
-	drawHouses  = function( houses ) {
-		// variable declarations
-		var r1 = outerRadius,
-			r2 = innerRadius,
-			tr = r2 + 5, // tick radius
-			h1 = 40, // inner radius for houses arc
-			h2 = 75, // outer radius for houses arc
-			tg = svg.append( 'g' ),
-			hg = svg.append( 'g' ),
-			hd = [], rotation, weight, color, ang, next, i, hang = 0, signs;
 
-		// initializations/assignments
-		rotation  = ascendant - 90;
-		zodiac    = [
-			{ v: 1, s: cmap[ 'pisces'      ] },
-			{ v: 1, s: cmap[ 'aquarius'    ] },
-			{ v: 1, s: cmap[ 'capricorn'   ] },
-			{ v: 1, s: cmap[ 'sagittarius' ] },
-			{ v: 1, s: cmap[ 'scorpio'     ] },
-			{ v: 1, s: cmap[ 'libra'       ] },
-			{ v: 1, s: cmap[ 'virgo'       ] },
-			{ v: 1, s: cmap[ 'leo'         ] },
-			{ v: 1, s: cmap[ 'cancer'      ] },
-			{ v: 1, s: cmap[ 'gemini'      ] },
-			{ v: 1, s: cmap[ 'taurus'      ] },
-			{ v: 1, s: cmap[ 'aries'       ] }
-		];
+	// create a function for drawing houses and the signs of the zodiac
+	drawHouses = function( houses ) {
+		// variable declarations
+		var r1   = this.outerRadius,       // outer radius of the entire chart
+			r2   = this.innerRadius,       // inner radius of the entire chart
+			tr   = r2 + 5,                 // tick radius
+			tg   = this.svg.append( 'g' ), // tick group
+			hg   = this.svg.append( 'g' ), // house group
+			hd   = [],				     // house data
+			rot  = this.ascendant - 90,    // 90 degree correction for how d3 draws arcs
+			hang = 0,					  // cumulative house cusp angle
+			ang, 					      // angle between houses
+			next, 						 // the index of the next house in the cycle
+			i,							 // counter for degrees 0 - 359
+			ex, 					       // amount to extend tick markds
+			mc,							// midheaven cusp signifier
+			// a data structure for drawing sign arcs
+			zodiac = [
+				{ v: 1, s: cmap.pisces      },
+				{ v: 1, s: cmap.aquarius    },
+				{ v: 1, s: cmap.capricorn   },
+				{ v: 1, s: cmap.sagittarius },
+				{ v: 1, s: cmap.scorpio     },
+				{ v: 1, s: cmap.libra       },
+				{ v: 1, s: cmap.virgo       },
+				{ v: 1, s: cmap.leo         },
+				{ v: 1, s: cmap.cancer      },
+				{ v: 1, s: cmap.gemini      },
+				{ v: 1, s: cmap.taurus      },
+				{ v: 1, s: cmap.aries       }
+			];
 
 		// draw the ticks around the zodiac and rotate them appropriately
-		for ( i = 0; i < 360; i++ ) {
-			if      ( 0 == i % 10 ) drawSpoke( i, r2, tr, tg, '#999', 1, 10 );
-			else if ( 0 == i %  5 ) drawSpoke( i, r2, tr, tg, '#999', 1,  5 );
-			else				    drawSpoke( i, r2, tr, tg, '#999', 1,  0 );
+		for ( i = 0; i < 360; i += 1 ) {
+			if      ( 0 === i % 10 ) { ex = 10; } // major tick
+			else if ( 0 === i %  5 ) { ex =  5; } // medium tick
+			else				     { ex =  0; } // minor tick
+			drawSpoke( i, r2, tr, tg, 'houses', ex );
 		}
-		tg.attr( 'transform', 'rotate( ' + rotation + ' )' );
 
-		// draw spokes for the houses
-		for ( i = 11; i >= 0; i-- ) {
-			next = 11 == i ? 0 : i + 1;
+		// rotate the tick group to align with the signs on the chart
+		tg.attr( 'transform', 'rotate( ' + rot + ' )' );
+
+		// draw spokes for the houses; reverse order
+		for ( i = 11; i >= 0; i -= 1 ) {
+			next = 11 === i ? 0 : i + 1;
 			if ( houses[ next ] > houses[ i ] ) {
 				ang = houses[ next ] - houses[ i ];
 			} else {
@@ -202,22 +314,27 @@ $(function(){
 			}
 			hd.push( ang );
 			hang += ang;
-			weight = ( i == 9 || i == 3 ) ? 2 : 1;
-			color  = ( i == 9 || i == 3 ) ? '#666' : '#999';
-			drawSpoke( hang, h1, r2, hg, color, weight );
-		};
+			mc = ( i === 9 || i === 3 ) ? ' mc' : '';
+			drawSpoke( hang, 40, r2, hg, 'cusp' + mc );
+		}
 
-		// draw the zodiac
-		drawArc( svg, r1, r2, rotation, zodiac, function( d ) { return +d.v; }, function( d ) { return d.data.s; }, 'zarc' );
-
-		// draw the houses
-		drawArc( svg, h1, h2, -90, hd, function( d ) { return d; }, function( d, i ) { return 12 - i; }, 'harc' );
+		// draw the zodiac and the houses
+		drawArc( r1, r2, rot, zodiac, function( d ) { return +d.v; }, function( d    ) { return d.data.s; }, 'zarc' );
+		drawArc( 40, 75, -90,     hd, function( d ) { return d;    }, function( d, i ) { return 12 - i;   }, 'harc' );
 	};
-	drawPlanets = function() {
-		var nodes = [ { name: 'earth', x: 0, y: 2, radius: 20, fixed: true, weight: 0 } ], links = [], g, collide, f, link;
 
-		// populate the nodes and links
-		$.each( planets, function( i, p ) {
+	// draws and locates the planets
+	drawPlanets = function() {
+		var nodes = [], // the point and text nodes that mark the planets
+			links = [], // the lines that connect planet symbol to the chart
+			g,          // group to hold the planets
+			collide,    // collision detection function
+			f,          // the d3 force layout
+			link;       // d3 group to hold links from symbol to chart
+
+		// populate the nodes and links; start by adding earth to the center
+		nodes.push( { name: 'earth', x: 0, y: 2, radius: 20, fixed: true, weight: 0 } );
+		$.each( this.planets, function( i, p ) {
 			var fixed = { x: p.x, y: p.y, radius: 0, fixed: true, weight: 1 };
 			nodes.push( fixed );
 			nodes.push( p );
@@ -226,22 +343,22 @@ $(function(){
 
 		// set up the force layout
 		f = d3.layout.force()
-			  .gravity( 0.05 )
-			  .charge( function( d, i ) { return i ? 0 : -300; } )
-			  .nodes( nodes )
-			  .links( links )
-			  .size( [ 0, 0 ] ).start();
+			.gravity( 0.05 )
+			.charge( function( d, i ) { return i ? 0 : -300; } )
+			.nodes( nodes )
+			.links( links )
+			.size( [ 0, 0 ] ).start();
 
-		g = svg.append( 'g' ).attr( 'class', 'planets' );
+		g = this.svg.append( 'g' ).attr( 'class', 'planets' );
 		g.selectAll( 'text' )
-		 .data( nodes )
-		 .enter().append( 'text' )
-		 .attr( 'x', function( p ) { return p.x; } )
-		 .attr( 'y', function( p ) { return p.y; } )
-		 .text( function( p, i ) { return 1 == i % 2 ? '' : cmap[ p.name ]; } )
-		 .attr( 'class', 'planet' )
-		 .style( 'font-size', '1.5em' )
-		 .style( 'text-anchor', 'middle' );
+		.data( nodes )
+		.enter().append( 'text' )
+		.attr( 'x', function( p ) { return p.x; } )
+		.attr( 'y', function( p ) { return p.y; } )
+		.text( function( p, i ) { return 1 === i % 2 ? '' : cmap[ p.name ]; } )
+		.attr( 'class', 'planet' )
+		.style( 'font-size', '1.5em' )
+		.style( 'text-anchor', 'middle' );
 
 		link = g.selectAll( '.link' )
 			.data( links )
@@ -250,14 +367,14 @@ $(function(){
 			.style( 'stroke', '#999' )
 			.style( 'stroke-width', '2' );
 
-		f.on( 'tick', function( e ) {
+		f.on( 'tick', function() {
 			var q = d3.geom.quadtree( nodes ),
-				i = 0,
+				i = 1,
 				l = nodes.length;
 
-			while ( ++i < l ) { q.visit( collide( nodes[ i ] ) ); }
+			while ( i < l ) { q.visit( collide( nodes[ i ] ) ); i += 1; }
 
-			svg.selectAll( 'text' )
+			g.selectAll( 'text' )
 				.attr( 'x', function( d ) { return d.x; } )
 				.attr( 'y', function( d ) { return d.y + 5; } );
 
@@ -280,9 +397,11 @@ $(function(){
 						h = Math.sqrt( x * x + y * y ),
 						d = node.radius + quad.point.radius;
 					if ( h < d ) {
-						h = ( h - d ) / d * .5;
-						node.x -= x *= h;
-						node.y -= y *= h;
+						h = ( h - d ) / d * 0.5;
+						x *= h;
+						y *= h;
+						node.x -= x;
+						node.y -= y;
 						quad.point.x += x;
 						quad.point.y += y;
 					}
@@ -291,91 +410,105 @@ $(function(){
 			};
 		};
 	};
+
+	// draws apects between planets
 	drawAspects = function() {
-		var g = svg.append( 'g' ).attr( 'class', 'aspects' );
-		$.each( aspects, function( i, aspect ) {
-			if ( aspect.type != 'conjunct' ) {
+		var g = this.svg.append( 'g' ).attr( 'class', 'aspects' );
+		$.each( this.aspects, function( i, aspect ) {
+			if ( aspect.type !== 'conjunct' ) {
 				var c = aspect.getCoords();
 				g.append( 'line' )
-				 .attr( 'x1', c.x1 )
-				 .attr( 'x2', c.x2 )
-				 .attr( 'y1', c.y1 )
-				 .attr( 'y2', c.y2 )
-				 .attr( 'class', aspect.type + ' ' + aspect.planet1.name + ' ' + aspect.planet2.name )
-				 .attr( 'stroke', '#999' )
-				 .attr( 'stroke-width', 1 );
+				.attr( 'x1', c.x1 )
+				.attr( 'x2', c.x2 )
+				.attr( 'y1', c.y1 )
+				.attr( 'y2', c.y2 )
+				.attr( 'class', aspect.type + ' ' + aspect.planet1.name + ' ' + aspect.planet2.name )
+				.attr( 'stroke', '#999' )
+				.attr( 'stroke-width', 1 );
 			}
 		});
 	};
-	drawChart   = function( person ) {
-		$.get( 'ephemeris.php', person ).done( function( cdata ) {
 
-			// set the ascendant for this chart
-			ascendant = +cdata.ascendant;
+	// get the data for this person
+	$.get( 'ephemeris.php', person ).done( function( cdata ) {
 
-			// draw the houses
-			drawHouses( cdata.houses );
+		// set the ascendant for this chart
+		this.ascendant = +cdata.ascendant;
 
-			// loop through the planets and add them to the global list
-			var i = 0;
-			$.each( cdata.planets, function( pname, p ) {
-				// get the longitude for the chart and the xy coords
-				var lon = 180 + ascendant - +p.lon,      // longitude for the chart: TEST THIS THOROUGHLY
-					rad = lon * Math.PI / 180,           // radians of the longitude
-					x   = innerRadius * Math.cos( rad ), // x coord on the chart
-					y   = innerRadius * Math.sin( rad ); // y coord on the chart
-				// add it to the global list of planets
-				planets.push( new Planet( pname, lon, +p.r, x, y ) );
-				i++;
-			});
+		// draw the houses
+		drawHouses( cdata.houses );
 
-			// loop through the planets and determine their aspects
-			$.each( planets, function( i, p1 ) {
-				$.each( planets, function( j, p2 ) {
-					if ( i != j && j > i ) {
-						var aspect = new Aspect( p1, p2 );
-						if ( aspect.type !== null ) {
-							p1.addAspect( aspect );
-							p2.addAspect( aspect );
-							aspects.push( aspect );
-						}
-					}
-				});
-			});
-
-			// draw the aspects
-			drawAspects();
-
-			// draw the planets
-			drawPlanets();
-
-			// create toggles for planets and aspects in the control panel
-			$.each( planets, function( i, p ) {
-				$( '#planets_tab ul' ).append( '<li><label><input type="checkbox" checked name="' + p.name + '">' + p.name + '</label></li>' );
-			});
-			$( '#planets_tab input[type="checkbox"]' ).on( 'change', function( e ) {
-				if ( this.checked ) {
-					$( '.' + this.name + ' text, .' + this.name ).fadeIn();
-				} else {
-					$( '.' + this.name + ' text, .' + this.name ).fadeOut();
-				}
-			});
-			$( '#aspects_tab input[type="checkbox"]' ).on( 'change', function( e ) {
-				if ( this.checked ) {
-					$( 'line.' + this.name ).fadeIn().attr( 'class', function( i, c ) { return c.replace( 'hidden', '' ); } );
-				} else {
-					$( 'line.' + this.name ).fadeOut( { complete: function() {
-						$( 'line.' + this.name ).attr( 'class', function( i, c ) { return c + ' hidden'; } );
-					}});
-				}
-			});
-			$( '#all_aspects' ).button().on( 'click', function() { $( '#aspects_tab input[type="checkbox"]:not(:checked)' ).prop( 'checked', true  ).trigger( 'change' ); } );
-			$( '#no_aspects'  ).button().on( 'click', function() { $( '#aspects_tab input[type="checkbox"]:checked'       ).prop( 'checked', false ).trigger( 'change' ); } );
-			$( '#no_aspects' ).button().trigger( 'click' );
+		// loop through the planets and add them to the global list
+		$.each( cdata.planets, function( pname, p ) {
+			// get the longitude for the chart and the xy coords
+			var lon = 180 + this.ascendant - +p.lon,      // longitude for the chart: TEST THIS THOROUGHLY
+				rad = lon * Math.PI / 180,           // radians of the longitude
+				x   = this.innerRadius * Math.cos( rad ), // x coord on the chart
+				y   = this.innerRadius * Math.sin( rad ); // y coord on the chart
+			// add it to the global list of planets
+			this.planets.push( new Planet( pname, lon, +p.r, x, y ) );
 		});
-	};
+
+		// loop through the planets and determine their aspects
+		$.each( this.planets, function( i, p1 ) {
+			$.each( this.planets, function( j, p2 ) {
+				if ( i !== j && j > i ) {
+					var aspect = new Aspect( p1, p2 );
+					if ( aspect.type !== null ) {
+						p1.addAspect( aspect );
+						p2.addAspect( aspect );
+						this.aspects.push( aspect );
+					}
+				}
+			});
+		});
+
+		// draw the aspects
+		drawAspects();
+
+		// draw the planets
+		drawPlanets();
+
+		// add the horizon
+		this.chart.append( 'line' ).attr( 'x1', 0 ).attr( 'x2', this.width ).attr( 'y1', this.height / 2 ).attr( 'y2', this.height / 2 ).attr( 'stroke', '#666' ).attr( 'stroke-width', 2 );
+
+		// create toggles for planets and aspects in the control panel
+		$.each( this.planets, function( i, p ) {
+			$( '#planets_tab ul' ).append( '<li><label><input type="checkbox" checked name="' + p.name + '">' + p.name + '</label></li>' );
+		});
+		$( '#planets_tab input[type="checkbox"]' ).on( 'change', function( e ) {
+			if ( this.checked ) {
+				$( '.' + this.name + ' text, .' + this.name ).fadeIn();
+			} else {
+				$( '.' + this.name + ' text, .' + this.name ).fadeOut();
+			}
+		});
+		$( '#aspects_tab input[type="checkbox"]' ).on( 'change', function() {
+			if ( this.checked ) {
+				$( 'line.' + this.name ).fadeIn().attr( 'class', function( i, c ) { return c.replace( 'hidden', '' ); } );
+			} else {
+				$( 'line.' + this.name ).fadeOut( { complete: function() {
+					$( 'line.' + this.name ).attr( 'class', function( i, c ) { return c + ' hidden'; } );
+				}});
+			}
+		});
+		$( '#all_aspects' ).button().on( 'click', function() { $( '#aspects_tab input[type="checkbox"]:not(:checked)' ).prop( 'checked', true  ).trigger( 'change' ); } );
+		$( '#no_aspects'  ).button().on( 'click', function() { $( '#aspects_tab input[type="checkbox"]:checked'       ).prop( 'checked', false ).trigger( 'change' ); } );
+		$( '#no_aspects' ).button().trigger( 'click' );
+	});
+};
+
+$(function(){
+	var //morgan = { lat: 37.413611, lon:  -79.1425,  date: '2/18/1974 12:30 AM', tz: 'UTC' },
+		nicole = { lat: 35.216667, lon:  -80.85,    date: '4/25/1976  1:02 PM', tz: 'UTC' },
+		//nozomi = { lat: 43.483333, lon: 142.08333,  date: '7/30/1973  2:57 PM', tz: 'UTC' },
+		//melvin = { lat: 38.857985, lon: -77.227071, date: '1/06/1994  6:00 AM', tz: 'America/New_York' },
+		chart  = new Chart( 'chart', 700, 700, 350 );
+
 
 	$( '#panel' ).tabs();
-	drawChart( nicole );
+	chart.draw( nicole );
 
 });
+
+}());
