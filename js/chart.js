@@ -347,9 +347,7 @@
 		.attr( 'x', function( p ) { return p.x; } )
 		.attr( 'y', function( p ) { return p.y; } )
 		.text( function( p, i ) { return 1 === i % 2 ? '' : cmap[ p.name ]; } )
-		.attr( 'class', 'planet' )
-		.style( 'font-size', '1.5em' )
-		.style( 'text-anchor', 'middle' );
+		.attr( 'class', function( p ) { return 'planet ' + p.name; } );
 
 		link = g.selectAll( '.link' )
 			.data( links )
@@ -367,7 +365,7 @@
 
 			g.selectAll( 'text' )
 				.attr( 'x', function( d ) { return d.x; } )
-				.attr( 'y', function( d ) { return d.y + 5; } );
+				.attr( 'y', function( d ) { return d.name !== 'earth' ? d.y + 8 : d.y + 11; } );
 
 			link.attr( 'x1', function( d ) { return d.source.x; } )
 				.attr( 'y1', function( d ) { return d.source.y; } )
@@ -426,7 +424,9 @@
 			$( '#planets_tab ul' ).append( '<li><label><input type="checkbox" checked name="' + p.name + '">' + p.name + '</label></li>' );
 		});
 		$.each( amap, function( a ) {
-			$( '#aspects_tab ul' ).append( '<li><label><input type="checkbox" checked name="' + a + '">' + a + '</label></li>')
+			if ( 'conjunct' !== a ) {
+				$( '#aspects_tab ul' ).append( '<li><label><input type="checkbox" checked name="' + a + '">' + a + '</label></li>');
+			}
 		});
 		$( '#planets_tab input[type="checkbox"]' ).on( 'change', function( e ) {
 			if ( this.checked ) {
@@ -455,6 +455,9 @@
 
 		// set the ascendant for this chart
 		self.ascendant = +cdata.ascendant;
+
+		// add the horizon
+		self.chart.insert( 'line', ':first-child' ).attr( 'x1', 0 ).attr( 'x2', self.width ).attr( 'y1', self.height / 2 ).attr( 'y2', self.height / 2 ).attr( 'stroke', '#666' ).attr( 'stroke-width', 2 );
 
 		// draw the houses
 		self.drawHouses( cdata.houses );
@@ -489,9 +492,6 @@
 
 		// draw the planets
 		self.drawPlanets();
-
-		// add the horizon
-		self.chart.append( 'line' ).attr( 'x1', 0 ).attr( 'x2', self.width ).attr( 'y1', self.height / 2 ).attr( 'y2', self.height / 2 ).attr( 'stroke', '#666' ).attr( 'stroke-width', 2 );
 
 		// set up the control panel
 		self.drawPanel();

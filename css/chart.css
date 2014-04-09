@@ -1,0 +1,75 @@
+/* set up custom font */
+@font-face {
+    font-family: "Kairon Semiserif";
+    src: url( "KaironSemiserif.ttf" ) format( 'truetype' );
+}
+.zarc, .planet {
+    font-family: "Kairon Semiserif";
+}
+
+body {
+    background: transparent url( ../images/space.jpg ) center center no-repeat fixed;
+}
+
+/* move control panel widgets to the top */
+td {
+    vertical-align: top;
+}
+
+/* basic chart style */
+#chart {
+    width: 700px;
+    height: 700px;
+    padding: 25px;
+    margin-right: 25px;
+    background: rgba( 0, 0, 0, 0.70 ); /* defaults to dark theme */
+    border-radius: 6px;
+    fill: transparent;
+    stroke: #aaa;
+    stroke-width: 1px;
+    border: 1px solid #555;
+}
+
+/* planet symbols */
+.planet {
+    fill: #fb0;
+    stroke: none;
+    font-size: 34px;
+    text-anchor: middle;
+}
+.planet.earth {
+    z-index: 10;
+    font-size: 44px;
+}
+
+#panel {
+    width: 450px;
+    background: rgba( 0, 0, 0, 0.70 );
+    height: 743px;
+}
+#planets_tab ul, #aspects_tab ul {
+    list-style: none;
+}
+#planets_tab ul li, #aspects_tab ul li {
+    text-indent: -1em;
+    margin-left: -1em;
+    padding-left: 0;
+}
+.harc:hover path {
+    fill: rgba( 255, 0, 0, 0.6 );
+}
+.semisextile    { stroke: #1F5EA8; }
+.semisquare     { stroke: #EB403B; }
+.sextile        { stroke: #274389; }
+.quintile       { stroke: #227FB0; }
+.square         { stroke: #B32E37; }
+.trine          { stroke: #39C0B3; }
+.sesquiquadrate { stroke: #6C2A6A; }
+.biquintile     { stroke: #2AB0C5; }
+.inconjunct     { stroke: #E98931; }
+.opposition     { stroke: #FBB735; }
+.hidden { display: none !important; }
+#aspects_toolbar, #planets_toolbar {
+    display: inline-block;
+    padding: 4px;
+}
