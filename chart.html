@@ -55,12 +55,13 @@
 					//melvin = { lat: 38.857985, lon: -77.227071, date: '1/06/1994  6:00 AM', tz: 'America/New_York' },
 					lauren = { lat: 40.353669, lon: -74.063367, date: '2/13/1992 11:52 PM', tz: 'America/New_York' },
 					shaina = { lat: 38.311582, lon: -77.480624, date: '10/27/1991 1:00 AM', tz: 'America/New_York' },
-					chart  = new Chart( 'chart', 700, 700, 300 );
+					chart  = new Chart( 'chart', 700, 700, 350 );
 
 				//console.log( chart );
-				$.get( 'ephemeris.php', shaina )
+				$.get( 'ephemeris.php', morgan )
 				 .done( function( cdata ) {
-					$.get( 'ephemeris.php', lauren ).done( function( tdata ) { chart.draw( cdata, tdata ); } );
+					chart.mini( cdata );
+					//$.get( 'ephemeris.php' ).done( function( tdata ) { chart.draw( cdata, tdata ); } );
 				});
 				$( '#panel' ).tabs();
 

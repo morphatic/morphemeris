@@ -292,8 +292,8 @@
 			if      ( 0 === i % 10 ) { ex = 10; } // major tick
 			else if ( 0 === i %  5 ) { ex =  5; } // medium tick
 			else				     { ex =  0; } // minor tick
-			self.drawSpoke( i,  r2, tr, tg, 'houses', ex );
-			self.drawSpoke( i, otr, r1, tg, 'houses', -ex );
+			self.drawSpoke( i, r2,  tr, tg, 'houses', ex );
+			self.drawSpoke( i, r1, otr, tg, 'houses', -ex );
 		}
 
 		// rotate the tick group to align with the signs on the chart
@@ -345,6 +345,13 @@
 			.size( [ 0, 0 ] ).start();
 
 		g = this.svg.append( 'g' ).attr( 'class', 'planets' );
+		link = g.selectAll( '.link' )
+			.data( links )
+			.enter().append( 'line' )
+			.attr( 'class', function( d ) { return 'link ' + d.target.name; } )
+			.style( 'stroke', '#999' )
+			.style( 'stroke-width', '2' );
+
 		g.selectAll( 'text' )
 		.data( nodes )
 		.enter().append( 'text' )
@@ -352,13 +359,6 @@
 		.attr( 'y', function( p ) { return p.y; } )
 		.text( function( p, i ) { return 1 === i % 2 ? '' : cmap[ p.name ]; } )
 		.attr( 'class', function( p ) { return 'planet ' + p.name; } );
-
-		link = g.selectAll( '.link' )
-			.data( links )
-			.enter().append( 'line' )
-			.attr( 'class', function( d ) { return 'link ' + d.target.name; } )
-			.style( 'stroke', '#999' )
-			.style( 'stroke-width', '2' );
 
 		f.on( 'tick', function() {
 			var q = d3.geom.quadtree( nodes ),
@@ -539,6 +539,104 @@
 		$( '#no_aspects' ).button().trigger( 'click' );
 	};
 
+	Chart.prototype.mini = function( cdata ) {
+		var self = this,
+			or = 80,
+			ir = or - 20,
+			rot,
+			tg   = self.svg.append( 'g' ),
+			ag = self.svg.append( 'g' ).attr( 'class', 'aspects' ),
+			i,
+			next,
+			ang,
+			hd = [],
+			zodiac = [
+				{ v: 1, s: cmap.pisces      },
+				{ v: 1, s: cmap.aquarius    },
+				{ v: 1, s: cmap.capricorn   },
+				{ v: 1, s: cmap.sagittarius },
+				{ v: 1, s: cmap.scorpio     },
+				{ v: 1, s: cmap.libra       },
+				{ v: 1, s: cmap.virgo       },
+				{ v: 1, s: cmap.leo         },
+				{ v: 1, s: cmap.cancer      },
+				{ v: 1, s: cmap.gemini      },
+				{ v: 1, s: cmap.taurus      },
+				{ v: 1, s: cmap.aries       }
+			];
+
+		// set the ascendant for this chart and the rotation
+		self.ascendant = +cdata.ascendant;
+		rot = self.ascendant - 90;
+
+		// add the horizon
+		self.chart.insert( 'line', ':first-child' )
+			.attr( 'x1', ( self.width / 2 ) - or - 15 )
+			.attr( 'x2', ( self.width / 2 ) + or + 15 )
+			.attr( 'y1', self.height / 2 )
+			.attr( 'y2', self.height / 2 )
+			.attr( 'stroke', '#666' )
+			.attr( 'stroke-width', 2 );
+
+		// add ticks
+		tg.attr( 'class', 'ticks' ).attr( 'transform', 'rotate(' + rot + ')' );
+		for ( i = 0; i < 36; i += 1 ) {
+			self.drawSpoke( i * 10, ir, ir + 7, tg, 'houses' );
+		}
+
+		// get angles for houses, then draw them
+		for ( i = 11; i >= 0; i -= 1 ) {
+			next = 11 === i ? 0 : i + 1;
+			ang = cdata.houses[ next ] - cdata.houses[ i ];
+			if ( ang < 0 ) { ang = 360 + ang; }
+			hd.push( ang );
+		}
+		self.drawArc( 15, ir, -90, hd, function( d ) { return d; }, function( d, i ) {
+			switch ( i ) { case 2: case 5: case 8: case 11: return 12 - i; break; default: return ''; }
+		}, 'harc');
+		self.drawArc( ir, or, rot, zodiac, function( d ) { return +d.v; }, function( d ) { return d.data.s; }, 'zarc' );
+
+		// loop through the planets and add them to the global list
+		self.planets = [];
+		$.each( cdata.planets, function( pname, p ) {
+			// get the longitude for the chart and the xy coords
+			var lon = 180 + self.ascendant - +p.lon,      // longitude for the chart: TEST THIS THOROUGHLY
+				rad = lon * Math.PI / 180,                // radians of the longitude
+				x   = ir * Math.cos( rad ), // x coord on the chart
+				y   = ir * Math.sin( rad ); // y coord on the chart
+			// add it to the global list of planets
+			self.planets.push( new Planet( pname, lon, +p.r, x, y ) );
+		});
+
+		// calculate the aspects
+		self.aspects = [];
+		$.each( self.planets, function( i, p1 ) {
+			$.each( self.planets, function( j, p2 ) {
+				if ( i !== j && j > i ) {
+					var aspect = new Aspect( p1, p2 );
+					if ( aspect.type !== null ) {
+						p1.addAspect( aspect );
+						p2.addAspect( aspect );
+						self.aspects.push( aspect );
+					}
+				}
+			});
+		});
+
+		// draw the aspects
+		$.each( self.aspects, function( i, aspect ) {
+			if ( aspect.type !== 'conjunct' ) {
+				var c = aspect.getCoords();
+				ag.append( 'line' )
+				.attr( 'x1', c.x1 )
+				.attr( 'x2', c.x2 )
+				.attr( 'y1', c.y1 )
+				.attr( 'y2', c.y2 )
+				.attr( 'class', aspect.type + ' ' + aspect.planet1.name + ' ' + aspect.planet2.name );
+			}
+		});
+	};
+
 	Chart.prototype.draw = function( cdata, tdata ) {
 
 		var self = this;
@@ -553,6 +651,7 @@
 		self.drawHouses( cdata.houses );
 
 		// loop through the planets and add them to the global list
+		self.planets = [];
 		$.each( cdata.planets, function( pname, p ) {
 			// get the longitude for the chart and the xy coords
 			var lon = 180 + self.ascendant - +p.lon,      // longitude for the chart: TEST THIS THOROUGHLY
