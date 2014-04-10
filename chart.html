@@ -53,10 +53,15 @@
 					nicole = { lat: 35.216667, lon:  -80.85,    date: '4/25/1976  1:02 PM', tz: 'UTC' },
 					//nozomi = { lat: 43.483333, lon: 142.08333,  date: '7/30/1973  2:57 PM', tz: 'UTC' },
 					//melvin = { lat: 38.857985, lon: -77.227071, date: '1/06/1994  6:00 AM', tz: 'America/New_York' },
-					chart  = new Chart( 'chart', 700, 700 );
+					lauren = { lat: 40.353669, lon: -74.063367, date: '2/13/1992 11:52 PM', tz: 'America/New_York' },
+					shaina = { lat: 38.311582, lon: -77.480624, date: '10/27/1991 1:00 AM', tz: 'America/New_York' },
+					chart  = new Chart( 'chart', 700, 700, 300 );
 
 				//console.log( chart );
-				$.get( 'ephemeris.php', morgan ).done( function( cdata ) { chart.draw( cdata ); } );
+				$.get( 'ephemeris.php', shaina )
+				 .done( function( cdata ) {
+					$.get( 'ephemeris.php', lauren ).done( function( tdata ) { chart.draw( cdata, tdata ); } );
+				});
 				$( '#panel' ).tabs();
 
 			});

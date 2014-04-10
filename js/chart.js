@@ -175,12 +175,14 @@
 	};
 
 	// define the Chart class
-	Chart = function( el, width, height ) {
+	Chart = function( el, width, height, diameter ) {
 		this.width       = width;        // the width of the chart
 		this.height      = height;       // the height of the chart
-		this.outerRadius = Math.min( width, height ) / 2;       // the outer radius for the chart
-		this.innerRadius = this.outerRadius - 50;  // the inner radius for the chart
+		// the outer radius for the chart
+		this.outerRadius = undefined === diameter ? Math.min( width, height ) / 2 : diameter / 2;
+		this.innerRadius = this.outerRadius - 40;  // the inner radius for the chart
 		this.planets     = [];	       // the planets to draw on this chart
+		this.transits    = [];		   // transiting planets or 2nd person's chart planets
 		this.aspects     = [];	       // the aspects between the planets
 		this.ascendant   = 0;	        // the default ascendant
 		// initialize the chart object
@@ -257,6 +259,7 @@
 			r1   = self.outerRadius,       // outer radius of the entire chart
 			r2   = self.innerRadius,       // inner radius of the entire chart
 			tr   = r2 + 5,                 // tick radius
+			otr  = r1 - 5,				 // outer tick radius
 			tg   = self.svg.append( 'g' ), // tick group
 			hg   = self.svg.append( 'g' ), // house group
 			hd   = [],				     // house data
@@ -289,7 +292,8 @@
 			if      ( 0 === i % 10 ) { ex = 10; } // major tick
 			else if ( 0 === i %  5 ) { ex =  5; } // medium tick
 			else				     { ex =  0; } // minor tick
-			self.drawSpoke( i, r2, tr, tg, 'houses', ex );
+			self.drawSpoke( i,  r2, tr, tg, 'houses', ex );
+			self.drawSpoke( i, otr, r1, tg, 'houses', -ex );
 		}
 
 		// rotate the tick group to align with the signs on the chart
@@ -324,7 +328,7 @@
 			link;       // d3 group to hold links from symbol to chart
 
 		// populate the nodes and links; start by adding earth to the center
-		nodes.push( { name: 'earth', x: 0, y: 2, radius: 20, fixed: true, weight: 0 } );
+		nodes.push( { name: 'earth', x: 0, y: 0, radius: 20, fixed: true, weight: 0 } );
 		$.each( self.planets, function( i, p ) {
 			var fixed = { x: p.x, y: p.y, radius: 0, fixed: true, weight: 1 };
 			nodes.push( fixed );
@@ -352,7 +356,93 @@
 		link = g.selectAll( '.link' )
 			.data( links )
 			.enter().append( 'line' )
-			.attr( 'class', 'link' )
+			.attr( 'class', function( d ) { return 'link ' + d.target.name; } )
+			.style( 'stroke', '#999' )
+			.style( 'stroke-width', '2' );
+
+		f.on( 'tick', function() {
+			var q = d3.geom.quadtree( nodes ),
+				i = 1,
+				l = nodes.length;
+
+			while ( i < l ) { q.visit( collide( nodes[ i ] ) ); i += 1; }
+
+			g.selectAll( 'text' )
+				.attr( 'x', function( d ) { return d.x; } )
+				.attr( 'y', function( d ) { return d.name !== 'earth' ? d.y + 8 : d.y + 13; } );
+
+			link.attr( 'x1', function( d ) { return d.source.x; } )
+				.attr( 'y1', function( d ) { return d.source.y; } )
+				.attr( 'x2', function( d ) { return d.target.x; } )
+				.attr( 'y2', function( d ) { return d.target.y; } );
+		});
+
+		collide = function( node ) {
+			var rad = node.radius + 16,
+				nx1 = node.x - rad,
+				nx2 = node.x + rad,
+				ny1 = node.y - rad,
+				ny2 = node.y + rad;
+			return function( quad, x1, y1, x2, y2 ) {
+				if ( quad.point && ( quad.point !== node ) ) {
+					var x = node.x - quad.point.x,
+						y = node.y - quad.point.y,
+						h = Math.sqrt( x * x + y * y ),
+						d = node.radius + quad.point.radius;
+					if ( h < d ) {
+						h = ( h - d ) / d * 0.5;
+						x *= h;
+						y *= h;
+						node.x -= x;
+						node.y -= y;
+						quad.point.x += x;
+						quad.point.y += y;
+					}
+				}
+				return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+			};
+		};
+	};
+
+	Chart.prototype.drawTransits = function() {
+		var self = this,
+			nodes = [], // the point and text nodes that mark the planets
+			links = [], // the lines that connect planet symbol to the chart
+			g,          // group to hold the planets
+			collide,    // collision detection function
+			f,          // the d3 force layout
+			link;       // d3 group to hold links from symbol to chart
+
+		// populate the nodes and links; start by adding earth to the center
+		nodes.push( { name: 'earth', x: 0, y: 0, radius: 20, fixed: true, weight: 0 } );
+		$.each( self.transits, function( i, p ) {
+			var fixed = { x: p.x, y: p.y, radius: 0, fixed: true, weight: 1 };
+			nodes.push( fixed );
+			nodes.push( p );
+			links.push( { source: fixed, target: p } );
+		});
+
+		// set up the force layout
+		f = d3.layout.force()
+			.gravity( -0.001 )
+			.charge( function( d, i ) { return i ? 0 : -3000; } )
+			.nodes( nodes )
+			.links( links )
+			.size( [ 0, 0 ] ).start();
+
+		g = this.svg.append( 'g' ).attr( 'class', 'transits' );
+		g.selectAll( 'text' )
+		.data( nodes )
+		.enter().append( 'text' )
+		.attr( 'x', function( p ) { return p.x; } )
+		.attr( 'y', function( p ) { return p.y; } )
+		.text( function( p, i ) { return 'earth' === p.name || 1 === i % 2 ? '' : cmap[ p.name ]; } )
+		.attr( 'class', function( p ) { return 'planet ' + p.name; } );
+
+		link = g.selectAll( '.link' )
+			.data( links )
+			.enter().append( 'line' )
+			.attr( 'class', function( d ) { return 'link ' + d.target.name; } )
 			.style( 'stroke', '#999' )
 			.style( 'stroke-width', '2' );
 
@@ -449,7 +539,7 @@
 		$( '#no_aspects' ).button().trigger( 'click' );
 	};
 
-	Chart.prototype.draw = function( cdata ) {
+	Chart.prototype.draw = function( cdata, tdata ) {
 
 		var self = this;
 
@@ -473,19 +563,51 @@
 			self.planets.push( new Planet( pname, lon, +p.r, x, y ) );
 		});
 
-		// loop through the planets and determine their aspects
-		$.each( self.planets, function( i, p1 ) {
-			$.each( self.planets, function( j, p2 ) {
-				if ( i !== j && j > i ) {
-					var aspect = new Aspect( p1, p2 );
-					if ( aspect.type !== null ) {
-						p1.addAspect( aspect );
-						p2.addAspect( aspect );
-						self.aspects.push( aspect );
+		// do we have transits/2nd person?
+		if ( undefined === tdata ) {
+			// nope, get aspects between just set of planets on the chart
+			// loop through the planets and determine their aspects
+			$.each( self.planets, function( i, p1 ) {
+				$.each( self.planets, function( j, p2 ) {
+					if ( i !== j && j > i ) {
+						var aspect = new Aspect( p1, p2 );
+						if ( aspect.type !== null ) {
+							p1.addAspect( aspect );
+							p2.addAspect( aspect );
+							self.aspects.push( aspect );
+						}
 					}
-				}
+				});
 			});
-		});
+		} else {
+			// loop through the transiting planets and add them to the global list
+			$.each( tdata.planets, function( pname, p ) {
+				// get the longitude for the chart and the xy coords
+				var lon = 180 + self.ascendant - +p.lon,      // longitude for the chart: TEST THIS THOROUGHLY
+					rad = lon * Math.PI / 180,                // radians of the longitude
+					x   = self.outerRadius * Math.cos( rad ), // x coord on the chart
+					y   = self.outerRadius * Math.sin( rad ); // y coord on the chart
+				// add it to the global list of planets
+				self.transits.push( new Planet( pname, lon, +p.r, x, y ) );
+			});
+
+			// calculate the aspects between inner and outer planets
+			$.each( self.planets, function( i, p1 ) {
+				$.each( self.transits, function( j, p2 ) {
+					if ( i !== j && j > i ) {
+						var aspect = new Aspect( p1, p2 );
+						if ( aspect.type !== null ) {
+							p1.addAspect( aspect );
+							p2.addAspect( aspect );
+							self.aspects.push( aspect );
+						}
+					}
+				});
+			});
+
+			// draw the transiting planets
+			self.drawTransits();
+		}
 
 		// draw the aspects
 		self.drawAspects();
